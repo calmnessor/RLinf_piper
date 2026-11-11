@@ -137,6 +137,53 @@ holding position.
 To use the arm in your own program or attach cameras, see
 :doc:`Robotics Interface </rst_source/concepts/robotics>`.
 
+Collect and Deploy Workpiece Policies
+----------------------------------------
+
+Use ``toolkits/piper_workpiece`` to record externally teleoperated workpiece
+demonstrations and deploy an existing LeRobot GR00T N1.7 checkpoint. This
+standalone workflow uses ``piper_sdk.C_PiperInterface_V2`` and the existing
+LeRobot runtime on the robot computer, rather than the ``pyAgxArm`` environment
+used by the controller example above. Run it from the RLinf checkout on Linux.
+
+Edit ``toolkits/piper_workpiece/cameras.json`` to match the three training
+views, then inspect the recording schema:
+
+.. code-block:: bash
+
+   bash toolkits/piper_workpiece/record_single_piper.sh --describe
+
+This opens no hardware. To record six absolute joints and the gripper while an
+external leader drives the follower, select a new dataset directory:
+
+.. code-block:: bash
+
+   DATASET_ROOT=/home/pai/Data/Industrial_sorting/rlinf_recordings/workpiece_blue_01 \
+   RECORDING_MODE=joint LABEL_OUTCOMES=true \
+   bash toolkits/piper_workpiece/record_single_piper.sh
+
+Recording reads CAN without enabling or resetting the arm. Right arrow finishes
+an episode; ``s`` / ``f`` labels its outcome. Left arrow discards the pending
+episode. Set ``RECORDING_MODE=eef_joint`` for the existing 16-dimensional
+representation containing XYZ, rotation-6D, gripper, and joints.
+
+Start inference in one terminal, then validate the bridge in another:
+
+.. code-block:: bash
+
+   bash toolkits/piper_workpiece/start_server_workpiece_groot.sh
+   bash toolkits/piper_workpiece/run_bridge_workpiece_groot.sh safe
+
+The server loads the configured LeRobot checkpoint; ``safe`` validates feedback,
+images, and predictions with CAN read-only. The ``real`` mode enables absolute
+joint execution using the existing 30 Hz timeline, 100 Hz publication, and
+Native GR00T RTC. On exit it requests a measured-joint hold and retains motor
+enable. RECAP policy training and EnvWorker integration require further work.
+
+Read the :download:`workpiece workflow instructions
+<../../../../../toolkits/piper_workpiece/README.md>` for Python environments,
+checkpoint selection, recording controls, outcome labels, and real execution.
+
 New Real-World Tasks
 --------------------
 

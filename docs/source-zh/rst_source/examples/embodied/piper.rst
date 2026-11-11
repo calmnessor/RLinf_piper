@@ -107,6 +107,38 @@ CAN 配置完成且机械臂上电后，先读取反馈：
 
 在自己的程序中控制机械臂或接入相机，请参考 :doc:`机器人接口 </rst_source/concepts/robotics>`。
 
+采集与部署工件任务
+------------------
+
+使用 ``toolkits/piper_workpiece`` 采集外部主臂遥操作的工件示范，并部署已有的 LeRobot GR00T N1.7 checkpoint。这组独立工具使用 ``piper_sdk.C_PiperInterface_V2`` 和机械臂电脑上的现有 LeRobot runtime；前面的控制器示例则使用 ``pyAgxArm`` 环境。在连接硬件的 Linux 电脑上，从 RLinf checkout 根目录运行。
+
+先编辑 ``toolkits/piper_workpiece/cameras.json``，保持三路相机与训练视角一致，再检查采集字段：
+
+.. code-block:: bash
+
+   bash toolkits/piper_workpiece/record_single_piper.sh --describe
+
+该命令不连接硬件。由外部主臂控制从臂时，选择一个新目录，采集六个绝对关节角和夹爪：
+
+.. code-block:: bash
+
+   DATASET_ROOT=/home/pai/Data/Industrial_sorting/rlinf_recordings/workpiece_blue_01 \
+   RECORDING_MODE=joint LABEL_OUTCOMES=true \
+   bash toolkits/piper_workpiece/record_single_piper.sh
+
+采集程序只读取 CAN，不使能或复位机械臂。按右方向键结束当前条，用 ``s`` / ``f`` 标记成功或失败；左方向键丢弃尚未保存的当前条。设置 ``RECORDING_MODE=eef_joint`` 可保存原来的 16 维 XYZ、旋转 6D、夹爪和关节数据。
+
+在一个终端启动推理服务，再在另一个终端检查 bridge：
+
+.. code-block:: bash
+
+   bash toolkits/piper_workpiece/start_server_workpiece_groot.sh
+   bash toolkits/piper_workpiece/run_bridge_workpiece_groot.sh safe
+
+服务端加载配置的 LeRobot checkpoint；``safe`` 在 CAN 只读条件下检查反馈、图像和预测。``real`` 模式使能并执行绝对关节目标，保留 30 Hz 时间线、100 Hz 发布和 Native GR00T RTC。退出时请求保持实测关节并保留使能。RECAP 策略训练与 EnvWorker 还需后续接入。
+
+Python 环境、checkpoint 路径、录制按键、结果标记及真机执行命令见 :download:`工件采集部署说明 <../../../../../toolkits/piper_workpiece/README.zh-CN.md>`。
+
 新增真机任务
 ------------
 
